@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <form id="todoForm">
+      <label>Todo: </label>
+      <input type="text" name="todo" id="todo">
+      <label>Description: </label>
+      <input type="text" name="dscrp" id="dscrp">
+      <button>Submit</button>
+      <h3>Tasks To Do</h3>
+      <ul id="taskstodo"></ul>
+      <br><br>
+      <h3>Tasks Completed</h3>
+      <ul id="tasksCompleted"></ul>
+    </form>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js"></script>
+    <script>
+
+document.getElementById('todoForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const todo = document.getElementById('todo').value;
+        const desc = document.getElementById('dscrp').value;
+        const task = `${todo} - ${desc}`;
+        const obj = { todo, desc, isDone: false };
+
+        axios.post('https://crudcrud.com/api/211de6960c624c4db148ef095b56822a/tasks', obj)
+          .then((response) => {
+            if (obj.isDone === false) {
+              showTodoOnScreen(response.data._id, todo, desc);
+              document.getElementById('todo').value = '';
+              document.getElementById('dscrp').value = '';
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      });
+
+      window.addEventListener("DOMContentLoaded", () => {
+        axios.get('https://crudcrud.com/api/211de6960c624c4db148ef095b56822a/tasks')
+          .then((response) => {
+            response.data.forEach((task) => {
+              if (task.isDone === false) {
+                showTodoOnScreen(task._id, task.todo, task.desc);
+              } else if (task.isDone === true) {
+                showCompletedOnScreen(task._id, task.todo, task.desc);
+              }
+            })
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      });
+
+      function showTodoOnScreen(taskId, todo, desc) {
+        let parentElement = document.getElementById('taskstodo');
+        let childElement = document.createElement('li');
+        childElement.className = 'task';
+        childElement.setAttribute('data-task-id', taskId);
+        childElement.setAttribute('data-task-name', todo);
+        childElement.setAttribute('data-task-desc', desc);
+        childElement.innerHTML = `${todo} - ${desc} 
+          <button class='done'>Done</button>
+          <button class='delete'>Delete</button>`;
+        parentElement.append(childElement);
+
+        const doneButton = document.querySelectorAll('.done');
+        doneButton.forEach((button) => {
+          button.addEventListener('click', taskDone);
+        });
+
+        const deleteButton = document.querySelectorAll('.delete');
+        deleteButton.forEach((button) => {
+          button.addEventListener('click', deleteTask);
+        });
+      }
+
+      function showCompletedOnScreen(taskId, todo, desc) {
+        let parentElement = document.getElementById('tasksCompleted');
+        let childElement = document.createElement('li');
+        childElement.className = 'done';
+        childElement.setAttribute('data-task-id', taskId);
+        childElement.innerHTML = `${todo} - ${desc}`;
+        parentElement.append(childElement);
+      }
+
+      function taskDone(event) {
+        event.preventDefault();
+        const taskId = event.target.parentElement.getAttribute('data-task-id');
+        const todo = event.target.parentElement.getAttribute('data-task-name');
+        const desc = event.target.parentElement.getAttribute('data-task-desc');
+
+  //event.target.disabled = true;
+        event.target.parentElement.remove();
+
+        axios.put(`https://crudcrud.com/api/211de6960c624c4db148ef095b56822a/tasks/${taskId}`, {
+        isDone: true,
+        todo: todo, 
+        desc: desc, 
+        })
+    .then(() => {
+    showCompletedOnScreen(taskId, todo, desc);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
+}
+
+    function deleteTask(event) {
+        const taskId = event.target.parentElement.getAttribute('data-task-id');
+        event.target.parentElement.remove();
+
+        axios.delete(`https://crudcrud.com/api/211de6960c624c4db148ef095b56822a/tasks/${taskId}`)
+          .catch((err) => {
+            console.log(err);
+          });
+      }
+    </script>
+  </body>
+</html>
